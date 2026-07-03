@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Касса Донерной</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; margin: 0; padding: 20px; background: #f4f4f4; }
+        #menu { flex: 2; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+        .product-card { background: white; padding: 20px; border-radius: 8px; text-align: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        #cart { flex: 1; background: white; padding: 20px; margin-left: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .cart-item { display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+        .total { font-size: 20px; font-weight: bold; margin-top: auto; padding-top: 20px; }
+        button.pay-btn { background: #28a745; color: white; border: none; padding: 15px; font-size: 18px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="menu"><h2>Загрузка меню...</h2></div>
+    <div id="cart">
+        <h2>Текущий заказ</h2>
+        <div id="cart-items"></div>
+        <div class="total">Итого: <span id="total-price">0</span> ₸</div>
+        <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
+    </div>
+<script>
+    const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
+    
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let cart = []; let products = [];
+
+    async function loadMenu() {
+        try {
+            let { data, error } = await supabase.from('products').select('*');
+            if (error) { 
+                document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка базы: ${error.message}<br>Код: ${error.code}</h2>`;
+                return; 
+            }
+            if (!data || data.length === 0) {
+                document.getElementById('menu').innerHTML = `<h2>В таблице 'products' нет товаров! Добавьте их в Supabase.</h2>`;
+                return;
+            }
+            products = data;
+            const menuDiv = document.getElementById('menu');
+            menuDiv.innerHTML = '';
+            data.forEach(p => {
+                menuDiv.innerHTML += `<div class="product-card" onclick="addToCart(${p.id})"><h3>${p.name}</h3><p>${p.price} ₸</p></div>`;
+            });
+        } catch (err) {
+            document.getElementById('menu').innerHTML = `<h2 style="color:red;">Критическая ошибка: ${err.message}</h2>`;
+        }
+    }
+    function addToCart(productId) {
+        const prod = products.find(p => p.id === productId);
+        if (!prod) return;
+        const inCart = cart.find(item => item.id === productId);
+        if (inCart) { inCart.quantity++; } else { cart.push({ ...prod, quantity: 1 }); }
+        updateCartUI();
+    }
+    function updateCartUI() {
+        const cartDiv = document.getElementById('cart-items');
+        cartDiv.innerHTML = ''; let total = 0;
+        cart.forEach(item => {
+            total += item.price * item.quantity;
+            cartDiv.innerHTML += `<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${item.price * item.quantity} ₸</span></div>`;
+        });
+        document.getElementById('total-price').innerText = total;
+    }
+    async function checkout() {
+        if (cart.length === 0) return alert("Корзина пуста!");
+        const total = parseInt(document.getElementById('total-price').innerText);
+        const { data: order, error: orderErr } = await supabase.from('orders').insert([{ total_amount: total, payment_method: 'cash' }]).select().single();
+        if (orderErr) return alert("Ошибка создания заказа: " + orderErr.message);
+        const itemsToInsert = cart.map(item => ({ order_id: order.id, product_id: item.id, quantity: item.quantity, price_at_sale: item.price }));
+        const { error: itemsErr } = await supabase.from('order_items').insert(itemsToInsert);
+        if (itemsErr) return alert("Ошибка позиций чека: " + itemsErr.message);
+        alert("Заказ успешно пробит!");
+        cart = []; updateCartUI();
+    }
+    loadMenu();
+</script>
+</body>
+</html>
