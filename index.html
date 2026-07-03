@@ -26,7 +26,7 @@
     const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
     const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
     
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     let cart = []; let products = [];
 
     async function loadMenu() {
