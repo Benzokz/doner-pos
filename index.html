@@ -9,52 +9,53 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
         .menu-container { flex: 2; }
-        .cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; }
+        .cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; display: flex; flex-direction: column; gap: 15px; }
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
         .product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
         .product-card:hover { border-color: #2ec4b6; }
         .product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
         .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .total { font-size: 1.2em; font-weight: bold; margin: 20px 0; }
+        .total { font-size: 1.2em; font-weight: bold; margin: 10px 0; }
         
-        /* Стили для выбора оплаты */
-        .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
+        /* Выбор оплаты */
+        .payment-methods { display: flex; gap: 10px; }
         .pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
         .pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
         
-        .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
+        .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
         .pay-btn:hover { background: #20a396; }
         
-        .z-btn { width: 100%; padding: 10px; background: #343a40; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer; font-weight: bold; }
-        .z-btn:hover { background: #212529; }
+        /* Кнопки смены */
+        .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
+        .btn-open { background: #28a745; }
+        .btn-open:hover { background: #218838; }
+        .btn-close { background: #dc3545; }
+        .btn-close:hover { background: #c82333; }
 
-        /* Кнопка Полноэкранного режима */
-        .fullscreen-btn {
-            position: absolute;
-            top: 10px;
-            right: 20px;
-            background: #fff;
-            border: 2px solid #ccc;
-            border-radius: 4px;
-            padding: 8px 12px;
-            font-size: 1.2em;
-            cursor: pointer;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            font-weight: bold;
-            z-index: 100;
-        }
-        .fullscreen-btn:hover { background: #eee; border-color: #999; }
-        
-        /* Фикс фона при полноэкранном режиме для всей страницы */
+        /* Блок истории продаж */
+        .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; max-height: 250px; overflow-y: auto; }
+        .history-item { display: flex; justify-content: space-between; font-size: 0.9em; padding: 6px 0; border-bottom: 1px dashed #ddd; color: #555; }
+        .history-time { color: #888; }
+
+        /* Экран блокировки закрытой смены */
+        #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+        #shift-overlay h2 { font-size: 2em; color: #333; }
+        #shift-overlay .start-shift-btn { padding: 20px 40px; font-size: 1.5em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        .fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
         :-webkit-full-screen { background-color: #f4f4f9; padding: 20px; }
-        :-ms-fullscreen { background-color: #f4f4f9; padding: 20px; }
         :fullscreen { background-color: #f4f4f9; padding: 20px; }
     </style>
 </head>
 <body>
 
-    <!-- Кнопка "На весь экран" -->
-    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="На весь экран">⛶ Экран</button>
+    <!-- Экран закрытой смены -->
+    <div id="shift-overlay">
+        <h2>Смена закрыта</h2>
+        <button class="start-shift-btn" onclick="openShift()">ОТКРЫТЬ СМЕНУ</button>
+    </div>
+
+    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Экран</button>
 
     <div class="menu-container">
         <h1>Меню донерной</h1>
@@ -62,6 +63,9 @@
     </div>
 
     <div class="cart-container">
+        <!-- Кнопка управления сменой -->
+        <button id="shift-toggle-btn" class="shift-btn btn-close" onclick="closeShift()">ЗАКРЫТЬ СМЕНУ</button>
+
         <h2>Текущий заказ</h2>
         <div id="cart-items"></div>
         <div class="total">Итого: <span id="total-price">0</span> ₸</div>
@@ -73,36 +77,98 @@
         </div>
 
         <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
-        <button class="z-btn" onclick="getZReport()">СНЯТЬ Z-ОТЧЕТ</button>
+
+        <!-- Вкладка истории продаж -->
+        <div class="history-container">
+            <h3>История за смену</h3>
+            <div id="history-list">
+                <div style="color:#aaa; font-style:italic; font-size:0.9em;">Продаж еще не было</div>
+            </div>
+        </div>
     </div>
 
 <script>
-    // Настройки Supabase
     const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
     const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
-
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let cart = [];
     let products = [];
     let currentPaymentMethod = 'Наличные';
+    
+    let shiftSalesHistory = [];
+    let isShiftOpen = false;
 
-    // Функция переключения полноэкранного режима
+    function initTerminal() {
+        const savedShift = localStorage.getItem('isShiftOpen');
+        const savedHistory = localStorage.getItem('shiftSalesHistory');
+        
+        if (savedHistory) {
+            shiftSalesHistory = JSON.parse(savedHistory);
+        }
+
+        if (savedShift === 'true') {
+            isShiftOpen = true;
+            document.getElementById('shift-overlay').style.display = 'none';
+            renderHistory();
+        } else {
+            isShiftOpen = false;
+            document.getElementById('shift-overlay').style.display = 'flex';
+        }
+        loadMenu();
+    }
+
+    function openShift() {
+        isShiftOpen = true;
+        localStorage.setItem('isShiftOpen', 'true');
+        document.getElementById('shift-overlay').style.display = 'none';
+        alert('Смена успешно открыта! Удачной работы.');
+    }
+
+    async function closeShift() {
+        if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет?')) return;
+
+        let totalSum = 0;
+        let cashSum = 0;
+        let kaspiSum = 0;
+        let totalOrders = shiftSalesHistory.length;
+
+        shiftSalesHistory.forEach(sale => {
+            totalSum += sale.amount;
+            if (sale.method === 'Наличные') cashSum += sale.amount;
+            if (sale.method === 'Каспи Банк') kaspiSum += sale.amount;
+        });
+
+        alert(
+            `====== Z-ОТЧЕТ (СМЕНА ЗАКРЫТА) ======\n` +
+            `Всего чеков пробито: ${totalOrders}\n` +
+            `-------------------------\n` +
+            `Наличные: ${cashSum} ₸\n` +
+            `Каспи Банк: ${kaspiSum} ₸\n` +
+            `-------------------------\n` +
+            `ОБЩАЯ ВЫРУЧКА: ${totalSum} ₸\n` +
+            `====================`
+        );
+
+        isShiftOpen = false;
+        shiftSalesHistory = [];
+        localStorage.removeItem('isShiftOpen');
+        localStorage.removeItem('shiftSalesHistory');
+        
+        cart = [];
+        renderCart();
+        renderHistory();
+        
+        document.getElementById('shift-overlay').style.display = 'flex';
+    }
+
     function toggleFullscreen() {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            // Разворачиваем на весь экран
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
-                document.documentElement.webkitRequestFullscreen();
-            }
+            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+            else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
         } else {
-            // Выходим из полноэкранного режима
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) { /* Safari */
-                document.webkitExitFullscreen();
-            }
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
         }
     }
 
@@ -122,7 +188,7 @@
             products = data;
             renderMenu();
         } catch (err) {
-            document.getElementById('menu').innerHTML = `<h2 style="color:red;">Критическая ошибка скрипта: ${err.message}</h2>`;
+            document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка скрипта: ${err.message}</h2>`;
         }
     }
 
@@ -140,13 +206,11 @@
     }
 
     function addToCart(productId) {
+        if (!isShiftOpen) return;
         const product = products.find(p => p.id === productId);
         const cartItem = cart.find(item => item.id === productId);
-        if (cartItem) {
-            cartItem.quantity += 1;
-        } else {
-            cart.push({ ...product, quantity: 1 });
-        }
+        if (cartItem) cartItem.quantity += 1;
+        else cart.push({ ...product, quantity: 1 });
         renderCart();
     }
 
@@ -167,7 +231,44 @@
         totalSpan.innerText = total;
     }
 
+    function addOrderToLocalHistory(amount, method) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        shiftSalesHistory.unshift({
+            time: timeStr,
+            amount: amount,
+            method: method
+        });
+
+        localStorage.setItem('shiftSalesHistory', JSON.stringify(shiftSalesHistory));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        const historyDiv = document.getElementById('history-list');
+        if (shiftSalesHistory.length === 0) {
+            historyDiv.innerHTML = '<div style="color:#aaa; font-style:italic; font-size:0.9em;">Продаж еще не было</div>';
+            return;
+        }
+
+        historyDiv.innerHTML = '';
+        shiftSalesHistory.forEach(sale => {
+            historyDiv.innerHTML += `
+                <div class="history-item">
+                    <span class="history-time">[${sale.time}]</span>
+                    <strong>${sale.amount} ₸</strong>
+                    <span>${sale.method === 'Наличные' ? '💵 Наличка' : '💳 Каспи'}</span>
+                </div>
+            `;
+        });
+    }
+
     async function checkout() {
+        if (!isShiftOpen) {
+            alert('Смена закрыта!');
+            return;
+        }
         if (cart.length === 0) {
             alert('Корзина пуста!');
             return;
@@ -185,67 +286,15 @@
         if (error) {
             alert('Ошибка при создании заказа: ' + error.message);
         } else {
+            addOrderToLocalHistory(totalAmount, currentPaymentMethod);
             alert(`Чек успешно пробит!\nСпособ оплаты: ${currentPaymentMethod}\nСумма: ${totalAmount} ₸`);
             cart = [];
             renderCart();
         }
     }
 
-    async function getZReport() {
-        try {
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const isoToday = today.toISOString();
-
-            let { data: orders, error } = await db
-                .from('orders')
-                .select('total_amount, payment_method')
-                .gte('created_at', isoToday);
-
-            if (error) {
-                alert('Ошибка при формировании Z-отчета: ' + error.message);
-                return;
-            }
-
-            if (!orders || orders.length === 0) {
-                alert('Z-ОТЧЕТ\n-------------------\nЗа сегодня заказов еще не было.');
-                return;
-            }
-
-            let totalSum = 0;
-            let cashSum = 0;
-            let kaspiSum = 0;
-            let totalOrders = orders.length;
-
-            orders.forEach(order => {
-                const amount = parseFloat(order.total_amount) || 0;
-                totalSum += amount;
-                if (order.payment_method === 'Наличные') {
-                    cashSum += amount;
-                } else if (order.payment_method === 'Каспи Банк') {
-                    kaspiSum += amount;
-                }
-            });
-
-            alert(
-                `====== Z-ОТЧЕТ ======\n` +
-                `Всего заказов за смену: ${totalOrders}\n` +
-                `-------------------------\n` +
-                `Наличные: ${cashSum} ₸\n` +
-                `Каспи Банк: ${kaspiSum} ₸\n` +
-                `-------------------------\n` +
-                `ОБЩАЯ ВЫРУЧКА: ${totalSum} ₸\n` +
-                `====================`
-            );
-
-        } catch (err) {
-            alert('Критическая ошибка при расчете смены: ' + err.message);
-        }
-    }
-
-    loadMenu();
+    initTerminal();
 </script>
 
 </body>
 </html>
-
