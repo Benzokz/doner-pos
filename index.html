@@ -7,7 +7,7 @@
     <!-- Подключаем Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
         .menu-container { flex: 2; }
         .cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; }
         .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
@@ -16,11 +16,45 @@
         .product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
         .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
         .total { font-size: 1.2em; font-weight: bold; margin: 20px 0; }
-        .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
+        
+        /* Стили для выбора оплаты */
+        .payment-methods { display: flex; gap: 10px; margin-bottom: 15px; }
+        .pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
+        .pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
+        
+        .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; margin-bottom: 10px; }
         .pay-btn:hover { background: #20a396; }
+        
+        .z-btn { width: 100%; padding: 10px; background: #343a40; color: white; border: none; border-radius: 4px; font-size: 0.9em; cursor: pointer; font-weight: bold; }
+        .z-btn:hover { background: #212529; }
+
+        /* Кнопка Полноэкранного режима */
+        .fullscreen-btn {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid #ccc;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 1.2em;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            font-weight: bold;
+            z-index: 100;
+        }
+        .fullscreen-btn:hover { background: #eee; border-color: #999; }
+        
+        /* Фикс фона при полноэкранном режиме для всей страницы */
+        :-webkit-full-screen { background-color: #f4f4f9; padding: 20px; }
+        :-ms-fullscreen { background-color: #f4f4f9; padding: 20px; }
+        :fullscreen { background-color: #f4f4f9; padding: 20px; }
     </style>
 </head>
 <body>
+
+    <!-- Кнопка "На весь экран" -->
+    <button class="fullscreen-btn" onclick="toggleFullscreen()" title="На весь экран">⛶ Экран</button>
 
     <div class="menu-container">
         <h1>Меню донерной</h1>
@@ -31,7 +65,15 @@
         <h2>Текущий заказ</h2>
         <div id="cart-items"></div>
         <div class="total">Итого: <span id="total-price">0</span> ₸</div>
+        
+        <h3>Способ оплаты:</h3>
+        <div class="payment-methods">
+            <button id="method-cash" class="pay-method-btn active" onclick="setPaymentMethod('Наличные')">Наличные</button>
+            <button id="method-kaspi" class="pay-method-btn" onclick="setPaymentMethod('Каспи Банк')">Каспи Банк</button>
+        </div>
+
         <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
+        <button class="z-btn" onclick="getZReport()">СНЯТЬ Z-ОТЧЕТ</button>
     </div>
 
 <script>
@@ -39,25 +81,44 @@
     const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
     const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
 
-    // Создаем клиент с именем db, чтобы Safari не ругался
     const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     
     let cart = [];
     let products = [];
+    let currentPaymentMethod = 'Наличные';
 
-    // Загрузка меню из базы данных
+    // Функция переключения полноэкранного режима
+    function toggleFullscreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            // Разворачиваем на весь экран
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                document.documentElement.webkitRequestFullscreen();
+            }
+        } else {
+            // Выходим из полноэкранного режима
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            }
+        }
+    }
+
+    function setPaymentMethod(method) {
+        currentPaymentMethod = method;
+        document.getElementById('method-cash').classList.toggle('active', method === 'Наличные');
+        document.getElementById('method-kaspi').classList.toggle('active', method === 'Каспи Банк');
+    }
+
     async function loadMenu() {
         try {
             let { data, error } = await db.from('products').select('*');
             if (error) {
-                document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка базы: ${error.message}<br>Код: ${error.code}</h2>`;
+                document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка базы: ${error.message}</h2>`;
                 return;
             }
-            if (!data || data.length === 0) {
-                document.getElementById('menu').innerHTML = '<h2>В базе нет товаров. Добавьте их в Supabase!</h2>';
-                return;
-            }
-
             products = data;
             renderMenu();
         } catch (err) {
@@ -65,7 +126,6 @@
         }
     }
 
-    // Отображение товаров на экране
     function renderMenu() {
         const menuDiv = document.getElementById('menu');
         menuDiv.innerHTML = '';
@@ -79,11 +139,9 @@
         });
     }
 
-    // Добавление в корзину
     function addToCart(productId) {
         const product = products.find(p => p.id === productId);
         const cartItem = cart.find(item => item.id === productId);
-
         if (cartItem) {
             cartItem.quantity += 1;
         } else {
@@ -92,13 +150,11 @@
         renderCart();
     }
 
-    // Отображение корзины
     function renderCart() {
         const cartDiv = document.getElementById('cart-items');
         const totalSpan = document.getElementById('total-price');
         cartDiv.innerHTML = '';
         let total = 0;
-
         cart.forEach(item => {
             total += item.price * item.quantity;
             cartDiv.innerHTML += `
@@ -111,7 +167,6 @@
         totalSpan.innerText = total;
     }
 
-    // Отправка заказа в базу данных
     async function checkout() {
         if (cart.length === 0) {
             alert('Корзина пуста!');
@@ -121,19 +176,73 @@
         const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
         const { data, error } = await db.from('orders').insert([
-            { total_amount: totalAmount }
+            { 
+                total_amount: totalAmount, 
+                payment_method: currentPaymentMethod 
+            }
         ]);
 
         if (error) {
             alert('Ошибка при создании заказа: ' + error.message);
         } else {
-            alert('Чек успешно пробит! Заказ сохранен.');
+            alert(`Чек успешно пробит!\nСпособ оплаты: ${currentPaymentMethod}\nСумма: ${totalAmount} ₸`);
             cart = [];
             renderCart();
         }
     }
 
-    // Запускаем загрузку при старте страницы
+    async function getZReport() {
+        try {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const isoToday = today.toISOString();
+
+            let { data: orders, error } = await db
+                .from('orders')
+                .select('total_amount, payment_method')
+                .gte('created_at', isoToday);
+
+            if (error) {
+                alert('Ошибка при формировании Z-отчета: ' + error.message);
+                return;
+            }
+
+            if (!orders || orders.length === 0) {
+                alert('Z-ОТЧЕТ\n-------------------\nЗа сегодня заказов еще не было.');
+                return;
+            }
+
+            let totalSum = 0;
+            let cashSum = 0;
+            let kaspiSum = 0;
+            let totalOrders = orders.length;
+
+            orders.forEach(order => {
+                const amount = parseFloat(order.total_amount) || 0;
+                totalSum += amount;
+                if (order.payment_method === 'Наличные') {
+                    cashSum += amount;
+                } else if (order.payment_method === 'Каспи Банк') {
+                    kaspiSum += amount;
+                }
+            });
+
+            alert(
+                `====== Z-ОТЧЕТ ======\n` +
+                `Всего заказов за смену: ${totalOrders}\n` +
+                `-------------------------\n` +
+                `Наличные: ${cashSum} ₸\n` +
+                `Каспи Банк: ${kaspiSum} ₸\n` +
+                `-------------------------\n` +
+                `ОБЩАЯ ВЫРУЧКА: ${totalSum} ₸\n` +
+                `====================`
+            );
+
+        } catch (err) {
+            alert('Критическая ошибка при расчете смены: ' + err.message);
+        }
+    }
+
     loadMenu();
 </script>
 
