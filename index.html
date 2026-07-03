@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Касса Донерной</title>
-    <!-- Подключаем Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
@@ -16,39 +15,27 @@
         .product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
         .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
         .total { font-size: 1.2em; font-weight: bold; margin: 10px 0; }
-        
-        /* Выбор оплаты */
         .payment-methods { display: flex; gap: 10px; }
         .pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
         .pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
-        
         .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
         .pay-btn:hover { background: #20a396; }
-
-        /* Кнопки смены */
         .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
         .btn-close { background: #dc3545; }
         .btn-close:hover { background: #c82333; }
-
-        /* Блок статистики и истории */
         .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
         .stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
         .stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
         .history-list { max-height: 180px; overflow-y: auto; border: 1px solid #eee; padding: 8px; border-radius: 4px; background: #fff; }
         .history-item { font-size: 0.9em; padding: 4px 0; border-bottom: 1px dashed #ddd; color: #333; display: flex; justify-content: space-between; }
-
-        /* Экран блокировки закрытой смены */
         #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
         #shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
-        #shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); transition: 0.2s; }
-        #shift-overlay .start-shift-btn:hover { background: #218838; transform: scale(1.02); }
-
+        #shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
         .fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <!-- Экран закрытой смены -->
     <div id="shift-overlay">
         <h2>Смена закрыта</h2>
         <button class="start-shift-btn" onclick="openShift()">ОТКРЫТЬ СМЕНУ</button>
@@ -62,7 +49,6 @@
     </div>
 
     <div class="cart-container">
-        <!-- Кнопка закрытия смены -->
         <button id="shift-toggle-btn" class="shift-btn btn-close" onclick="closeShift()">ЗАКРЫТЬ СМЕНУ</button>
 
         <h2>Текущий заказ</h2>
@@ -77,10 +63,8 @@
 
         <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
 
-        <!-- Вкладка истории продаж за текущую смену -->
         <div class="history-container">
             <h3>Статистика за смену</h3>
-            
             <div class="stats-block">
                 <div class="stats-line"><span>💵 Наличными:</span> <strong id="stats-cash">0 ₸</strong></div>
                 <div class="stats-line"><span>💳 Каспи Банк:</span> <strong id="stats-kaspi">0 ₸</strong></div>
@@ -105,14 +89,13 @@
     let products = [];
     let currentPaymentMethod = 'Наличные';
     
-    // Структура смены
     let isShiftOpen = false;
     let shiftData = {
         openedAt: null,
         cashSales: 0,
         kaspiSales: 0,
         totalSales: 0,
-        itemsSummary: {} // Тут копится { "Кола": 5, "Донер классический": 4 }
+        itemsSummary: {}
     };
 
     function initTerminal() {
@@ -156,26 +139,23 @@
         if (!isShiftOpen) return;
         if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет? Все данные уйдут в архив.')) return;
 
-        // Формируем красивую строку проданных товаров для отчета на экране
         let itemsReport = '';
         for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
-            itemsReport += `• ${name}: ${qty} шт\n`;
+            itemsReport += name + ": " + qty + " шт\n";
         }
         if (itemsReport === '') itemsReport = 'Продаж не было\n';
 
-        // Показываем финальный Z-отчет кассиру
         alert(
-            `====== Z-ОТЧЕТ ======\n` +
-            `ПРОДАННЫЕ ТОВАРЫ:\n${itemsReport}` +
-            `-------------------------\n` +
-            `Наличные: ${shiftData.cashSales} ₸\n` +
-            `Каспи Банк: ${shiftData.kaspiSales} ₸\n` +
-            `-------------------------\n` +
-            `ОБЩАЯ ВЫРУЧКА: ${shiftData.totalSales} ₸\n` +
-            `====================`
+            "====== Z-ОТЧЕТ ======\n" +
+            "ПРОДАННЫЕ ТОВАРЫ:\n" + itemsReport +
+            "-------------------------\n" +
+            "Наличные: " + shiftData.cashSales + " ₸\n" +
+            "Каспи Банк: " + shiftData.kaspiSales + " ₸\n" +
+            "-------------------------\n" +
+            "ОБЩАЯ ВЫРУЧКА: " + shiftData.totalSales + " ₸\n" +
+            "===================="
         );
 
-        // Отправляем данные смены в архив базы данных Supabase
         try {
             const { error } = await db.from('shifts').insert([
                 {
@@ -184,20 +164,19 @@
                     total_sales: shiftData.totalSales,
                     cash_sales: shiftData.cashSales,
                     kaspi_sales: shiftData.kaspiSales,
-                    items_summary: shiftData.itemsSummary
+                    items_summary: itemsReport
                 }
             ]);
 
             if (error) {
-                alert('Ошибка сохранения смены в журнал базы данных: ' + error.message);
-                return; // Не закрываем смену локально, если база вернула ошибку
+                alert('Ошибка сохранения смены: ' + error.message);
+                return;
             }
         } catch (err) {
-            alert('Сбой сети при отправке архива: ' + err.message);
+            alert('Сбой сети: ' + err.message);
             return;
         }
 
-        // Обнуляем локальное состояние кассы
         isShiftOpen = false;
         shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
         localStorage.removeItem('isShiftOpen');
@@ -208,7 +187,7 @@
         updateStatsUI();
         
         document.getElementById('shift-overlay').style.display = 'flex';
-        alert('Смена успешно закрыта и заархивирована в журнал!');
+        alert('Смена успешно закрыта и сохранена в журнал!');
     }
 
     function toggleFullscreen() {
@@ -231,13 +210,13 @@
         try {
             let { data, error } = await db.from('products').select('*');
             if (error) {
-                document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка базы: ${error.message}</h2>`;
+                document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка базы: ' + error.message + '</h2>';
                 return;
             }
             products = data;
             renderMenu();
         } catch (err) {
-            document.getElementById('menu').innerHTML = `<h2 style="color:red;">Ошибка скрипта: ${err.message}</h2>`;
+            document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка скрипта: ' + err.message + '</h2>';
         }
     }
 
@@ -245,18 +224,13 @@
         const menuDiv = document.getElementById('menu');
         menuDiv.innerHTML = '';
         products.forEach(product => {
-            menuDiv.innerHTML += `
-                <div class="product-card" onclick="addToCart(${product.id})">
-                    <h3>${product.name}</h3>
-                    <div class="product-price">${product.price} ₸</div>
-                </div>
-            `;
+            menuDiv.innerHTML += '<div class="product-card" onclick="addToCart(' + product.id + ')"><h3>' + product.name + '</h3><div class="product-price">' + product.price + ' ₸</div></div>';
         });
     }
 
     function addToCart(productId) {
         if (!isShiftOpen) {
-            alert('Смена закрыта! Откройте её для добавления товаров.');
+            alert('Смена закрыта!');
             return;
         }
         const product = products.find(p => p.id === productId);
@@ -273,18 +247,12 @@
         let total = 0;
         cart.forEach(item => {
             total += item.price * item.quantity;
-            cartDiv.innerHTML += `
-                <div class="cart-item">
-                    <span>${item.name} x${item.quantity}</span>
-                    <span>${item.price * item.quantity} ₸</span>
-                </div>
-            `;
+            cartDiv.innerHTML += '<div class="cart-item"><span>' + item.name + ' x' + item.quantity + '</span><span>' + (item.price * item.quantity) + ' ₸</span></div>';
         });
         totalSpan.innerText = total;
     }
 
     function processShiftSale(amount, method, soldItems) {
-        // Добавляем деньги в нужную кассу
         if (method === 'Наличные') {
             shiftData.cashSales += amount;
         } else {
@@ -292,7 +260,6 @@
         }
         shiftData.totalSales += amount;
 
-        // Суммируем количество проданных штук штук
         soldItems.forEach(item => {
             if (shiftData.itemsSummary[item.name]) {
                 shiftData.itemsSummary[item.name] += item.quantity;
@@ -306,9 +273,9 @@
     }
 
     function updateStatsUI() {
-        document.getElementById('stats-cash').innerText = `${shiftData.cashSales} ₸`;
-        document.getElementById('stats-kaspi').innerText = `${shiftData.kaspiSales} ₸`;
-        document.getElementById('stats-total').innerText = `${shiftData.totalSales} ₸`;
+        document.getElementById('stats-cash').innerText = shiftData.cashSales + " ₸";
+        document.getElementById('stats-kaspi').innerText = shiftData.kaspiSales + " ₸";
+        document.getElementById('stats-total').innerText = shiftData.totalSales + " ₸";
 
         const historyListDiv = document.getElementById('history-list');
         const keys = Object.keys(shiftData.itemsSummary);
@@ -320,12 +287,7 @@
 
         historyListDiv.innerHTML = '';
         for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
-            historyListDiv.innerHTML += `
-                <div class="history-item">
-                    <span>📦 ${name}</span>
-                    <strong>${qty} шт</strong>
-                </div>
-            `;
+            historyListDiv.innerHTML += '<div class="history-item"><span>📦 ' + name + '</span><strong>' + qty + ' шт</strong></div>';
         }
     }
 
@@ -351,10 +313,8 @@
         if (error) {
             alert('Ошибка при создании заказа: ' + error.message);
         } else {
-            // Передаем данные продажи в обработчик смены
             processShiftSale(totalAmount, currentPaymentMethod, cart);
-            
-            alert(`Чек успешно пробит!\nСпособ оплаты: ${currentPaymentMethod}\nСумма: ${totalAmount} ₸`);
+            alert('Чек успешно пробит!\nСпособ оплаты: ' + currentPaymentMethod + '\nСумма: ' + totalAmount + ' ₸');
             cart = [];
             renderCart();
         }
