@@ -24,27 +24,26 @@
         
         .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
         .pay-btn:hover { background: #20a396; }
-        
+
         /* Кнопки смены */
         .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
-        .btn-open { background: #28a745; }
-        .btn-open:hover { background: #218838; }
         .btn-close { background: #dc3545; }
         .btn-close:hover { background: #c82333; }
 
-        /* Блок истории продаж */
-        .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; max-height: 250px; overflow-y: auto; }
-        .history-item { display: flex; justify-content: space-between; font-size: 0.9em; padding: 6px 0; border-bottom: 1px dashed #ddd; color: #555; }
-        .history-time { color: #888; }
+        /* Блок статистики и истории */
+        .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
+        .stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
+        .stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .history-list { max-height: 180px; overflow-y: auto; border: 1px solid #eee; padding: 8px; border-radius: 4px; background: #fff; }
+        .history-item { font-size: 0.9em; padding: 4px 0; border-bottom: 1px dashed #ddd; color: #333; display: flex; justify-content: space-between; }
 
         /* Экран блокировки закрытой смены */
-        #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.95); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
-        #shift-overlay h2 { font-size: 2em; color: #333; }
-        #shift-overlay .start-shift-btn { padding: 20px 40px; font-size: 1.5em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+        #shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
+        #shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); transition: 0.2s; }
+        #shift-overlay .start-shift-btn:hover { background: #218838; transform: scale(1.02); }
 
         .fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
-        :-webkit-full-screen { background-color: #f4f4f9; padding: 20px; }
-        :fullscreen { background-color: #f4f4f9; padding: 20px; }
     </style>
 </head>
 <body>
@@ -63,7 +62,7 @@
     </div>
 
     <div class="cart-container">
-        <!-- Кнопка управления сменой -->
+        <!-- Кнопка закрытия смены -->
         <button id="shift-toggle-btn" class="shift-btn btn-close" onclick="closeShift()">ЗАКРЫТЬ СМЕНУ</button>
 
         <h2>Текущий заказ</h2>
@@ -78,11 +77,21 @@
 
         <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
 
-        <!-- Вкладка истории продаж -->
+        <!-- Вкладка истории продаж за текущую смену -->
         <div class="history-container">
-            <h3>История за смену</h3>
-            <div id="history-list">
-                <div style="color:#aaa; font-style:italic; font-size:0.9em;">Продаж еще не было</div>
+            <h3>Статистика за смену</h3>
+            
+            <div class="stats-block">
+                <div class="stats-line"><span>💵 Наличными:</span> <strong id="stats-cash">0 ₸</strong></div>
+                <div class="stats-line"><span>💳 Каспи Банк:</span> <strong id="stats-kaspi">0 ₸</strong></div>
+                <div class="stats-line" style="border-top:1px solid #ccc; padding-top:5px; margin-top:5px; font-weight:bold;">
+                    <span>💰 Общая выручка:</span> <strong id="stats-total" style="color:#2ec4b6;">0 ₸</strong>
+                </div>
+            </div>
+
+            <h4>Продано товаров сегодня:</h4>
+            <div id="history-list" class="history-list">
+                <div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>
             </div>
         </div>
     </div>
@@ -96,70 +105,110 @@
     let products = [];
     let currentPaymentMethod = 'Наличные';
     
-    let shiftSalesHistory = [];
+    // Структура смены
     let isShiftOpen = false;
+    let shiftData = {
+        openedAt: null,
+        cashSales: 0,
+        kaspiSales: 0,
+        totalSales: 0,
+        itemsSummary: {} // Тут копится { "Кола": 5, "Донер классический": 4 }
+    };
 
     function initTerminal() {
-        const savedShift = localStorage.getItem('isShiftOpen');
-        const savedHistory = localStorage.getItem('shiftSalesHistory');
+        const savedShiftStatus = localStorage.getItem('isShiftOpen');
+        const savedShiftData = localStorage.getItem('shiftData');
         
-        if (savedHistory) {
-            shiftSalesHistory = JSON.parse(savedHistory);
+        if (savedShiftData) {
+            shiftData = JSON.parse(savedShiftData);
         }
 
-        if (savedShift === 'true') {
+        if (savedShiftStatus === 'true') {
             isShiftOpen = true;
             document.getElementById('shift-overlay').style.display = 'none';
-            renderHistory();
         } else {
             isShiftOpen = false;
             document.getElementById('shift-overlay').style.display = 'flex';
         }
+        
+        updateStatsUI();
         loadMenu();
     }
 
     function openShift() {
         isShiftOpen = true;
+        shiftData = {
+            openedAt: new Date().toISOString(),
+            cashSales: 0,
+            kaspiSales: 0,
+            totalSales: 0,
+            itemsSummary: {}
+        };
         localStorage.setItem('isShiftOpen', 'true');
+        localStorage.setItem('shiftData', JSON.stringify(shiftData));
+        
         document.getElementById('shift-overlay').style.display = 'none';
-        alert('Смена успешно открыта! Удачной работы.');
+        updateStatsUI();
+        alert('Смена успешно открыта!');
     }
 
     async function closeShift() {
-        if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет?')) return;
+        if (!isShiftOpen) return;
+        if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет? Все данные уйдут в архив.')) return;
 
-        let totalSum = 0;
-        let cashSum = 0;
-        let kaspiSum = 0;
-        let totalOrders = shiftSalesHistory.length;
+        // Формируем красивую строку проданных товаров для отчета на экране
+        let itemsReport = '';
+        for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+            itemsReport += `• ${name}: ${qty} шт\n`;
+        }
+        if (itemsReport === '') itemsReport = 'Продаж не было\n';
 
-        shiftSalesHistory.forEach(sale => {
-            totalSum += sale.amount;
-            if (sale.method === 'Наличные') cashSum += sale.amount;
-            if (sale.method === 'Каспи Банк') kaspiSum += sale.amount;
-        });
-
+        // Показываем финальный Z-отчет кассиру
         alert(
-            `====== Z-ОТЧЕТ (СМЕНА ЗАКРЫТА) ======\n` +
-            `Всего чеков пробито: ${totalOrders}\n` +
+            `====== Z-ОТЧЕТ ======\n` +
+            `ПРОДАННЫЕ ТОВАРЫ:\n${itemsReport}` +
             `-------------------------\n` +
-            `Наличные: ${cashSum} ₸\n` +
-            `Каспи Банк: ${kaspiSum} ₸\n` +
+            `Наличные: ${shiftData.cashSales} ₸\n` +
+            `Каспи Банк: ${shiftData.kaspiSales} ₸\n` +
             `-------------------------\n` +
-            `ОБЩАЯ ВЫРУЧКА: ${totalSum} ₸\n` +
+            `ОБЩАЯ ВЫРУЧКА: ${shiftData.totalSales} ₸\n` +
             `====================`
         );
 
+        // Отправляем данные смены в архив базы данных Supabase
+        try {
+            const { error } = await db.from('shifts').insert([
+                {
+                    opened_at: shiftData.openedAt,
+                    closed_at: new Date().toISOString(),
+                    total_sales: shiftData.totalSales,
+                    cash_sales: shiftData.cashSales,
+                    kaspi_sales: shiftData.kaspiSales,
+                    items_summary: shiftData.itemsSummary
+                }
+            ]);
+
+            if (error) {
+                alert('Ошибка сохранения смены в журнал базы данных: ' + error.message);
+                return; // Не закрываем смену локально, если база вернула ошибку
+            }
+        } catch (err) {
+            alert('Сбой сети при отправке архива: ' + err.message);
+            return;
+        }
+
+        // Обнуляем локальное состояние кассы
         isShiftOpen = false;
-        shiftSalesHistory = [];
+        shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
         localStorage.removeItem('isShiftOpen');
-        localStorage.removeItem('shiftSalesHistory');
+        localStorage.removeItem('shiftData');
         
         cart = [];
         renderCart();
-        renderHistory();
+        updateStatsUI();
         
         document.getElementById('shift-overlay').style.display = 'flex';
+        alert('Смена успешно закрыта и заархивирована в журнал!');
     }
 
     function toggleFullscreen() {
@@ -206,7 +255,10 @@
     }
 
     function addToCart(productId) {
-        if (!isShiftOpen) return;
+        if (!isShiftOpen) {
+            alert('Смена закрыта! Откройте её для добавления товаров.');
+            return;
+        }
         const product = products.find(p => p.id === productId);
         const cartItem = cart.find(item => item.id === productId);
         if (cartItem) cartItem.quantity += 1;
@@ -231,37 +283,50 @@
         totalSpan.innerText = total;
     }
 
-    function addOrderToLocalHistory(amount, method) {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        
-        shiftSalesHistory.unshift({
-            time: timeStr,
-            amount: amount,
-            method: method
+    function processShiftSale(amount, method, soldItems) {
+        // Добавляем деньги в нужную кассу
+        if (method === 'Наличные') {
+            shiftData.cashSales += amount;
+        } else {
+            shiftData.kaspiSales += amount;
+        }
+        shiftData.totalSales += amount;
+
+        // Суммируем количество проданных штук штук
+        soldItems.forEach(item => {
+            if (shiftData.itemsSummary[item.name]) {
+                shiftData.itemsSummary[item.name] += item.quantity;
+            } else {
+                shiftData.itemsSummary[item.name] = item.quantity;
+            }
         });
 
-        localStorage.setItem('shiftSalesHistory', JSON.stringify(shiftSalesHistory));
-        renderHistory();
+        localStorage.setItem('shiftData', JSON.stringify(shiftData));
+        updateStatsUI();
     }
 
-    function renderHistory() {
-        const historyDiv = document.getElementById('history-list');
-        if (shiftSalesHistory.length === 0) {
-            historyDiv.innerHTML = '<div style="color:#aaa; font-style:italic; font-size:0.9em;">Продаж еще не было</div>';
+    function updateStatsUI() {
+        document.getElementById('stats-cash').innerText = `${shiftData.cashSales} ₸`;
+        document.getElementById('stats-kaspi').innerText = `${shiftData.kaspiSales} ₸`;
+        document.getElementById('stats-total').innerText = `${shiftData.totalSales} ₸`;
+
+        const historyListDiv = document.getElementById('history-list');
+        const keys = Object.keys(shiftData.itemsSummary);
+
+        if (keys.length === 0) {
+            historyListDiv.innerHTML = '<div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>';
             return;
         }
 
-        historyDiv.innerHTML = '';
-        shiftSalesHistory.forEach(sale => {
-            historyDiv.innerHTML += `
+        historyListDiv.innerHTML = '';
+        for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+            historyListDiv.innerHTML += `
                 <div class="history-item">
-                    <span class="history-time">[${sale.time}]</span>
-                    <strong>${sale.amount} ₸</strong>
-                    <span>${sale.method === 'Наличные' ? '💵 Наличка' : '💳 Каспи'}</span>
+                    <span>📦 ${name}</span>
+                    <strong>${qty} шт</strong>
                 </div>
             `;
-        });
+        }
     }
 
     async function checkout() {
@@ -286,7 +351,9 @@
         if (error) {
             alert('Ошибка при создании заказа: ' + error.message);
         } else {
-            addOrderToLocalHistory(totalAmount, currentPaymentMethod);
+            // Передаем данные продажи в обработчик смены
+            processShiftSale(totalAmount, currentPaymentMethod, cart);
+            
             alert(`Чек успешно пробит!\nСпособ оплаты: ${currentPaymentMethod}\nСумма: ${totalAmount} ₸`);
             cart = [];
             renderCart();
