@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Касса Донерной</title>
+<title>Касса Grill Chicks</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
@@ -26,7 +26,7 @@
     .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
     .stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
     .stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
-    .sales-log { max-height: 200px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; border-radius: 4px; background: #fff; font-size: 0.9em; }
+    .sales-log { max-height: 220px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; border-radius: 4px; background: #fff; font-size: 0.9em; }
     .log-item { padding: 6px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; }
     #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
     #shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
@@ -42,7 +42,7 @@
 <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Экран</button>
 
 <div class="menu-container">
-    <h1>Меню донерной</h1>
+    <h1>Меню Grill Chicks</h1>
     <div id="menu" class="products-grid">Загрузка меню...</div>
 </div>
 
@@ -120,8 +120,7 @@ function openShift() {
     alert('Смена успешно открыта!');
 }
 
-async function closeShift() { /* оставил как было */ 
-    // ... (твой старый код closeShift без изменений)
+async function closeShift() {
     if (!isShiftOpen) return;
     if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет?')) return;
     
@@ -133,9 +132,15 @@ async function closeShift() { /* оставил как было */
     
     alert("====== Z-ОТЧЕТ ======\n" + itemsReport + "-------------------------\nНаличные: " + shiftData.cashSales + " ₸\nКаспи Банк: " + shiftData.kaspiSales + " ₸\n-------------------------\nОБЩАЯ ВЫРУЧКА: " + shiftData.totalSales + " ₸\n====================");
     
-    // сохранение в базу (оставил как было)
     try {
-        await db.from('shifts').insert([{ opened_at: shiftData.openedAt, closed_at: new Date().toISOString(), total_sales: shiftData.totalSales, cash_sales: shiftData.cashSales, kaspi_sales: shiftData.kaspiSales, items_summary: itemsReport }]);
+        await db.from('shifts').insert([{ 
+            opened_at: shiftData.openedAt, 
+            closed_at: new Date().toISOString(), 
+            total_sales: shiftData.totalSales, 
+            cash_sales: shiftData.cashSales, 
+            kaspi_sales: shiftData.kaspiSales, 
+            items_summary: itemsReport 
+        }]);
     } catch (err) {}
     
     isShiftOpen = false;
@@ -151,12 +156,9 @@ async function closeShift() { /* оставил как было */
     alert('Смена успешно закрыта!');
 }
 
-function toggleFullscreen() { /* без изменений */ 
-    if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-    } else {
-        document.exitFullscreen();
-    }
+function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
 }
 
 function setPaymentMethod(method) {
@@ -165,7 +167,7 @@ function setPaymentMethod(method) {
     document.getElementById('method-kaspi').classList.toggle('active', method === 'Каспи Банк');
 }
 
-async function loadMenu() { /* без изменений */ 
+async function loadMenu() {
     try {
         let { data, error } = await db.from('products').select('*');
         if (error) throw error;
@@ -231,37 +233,38 @@ function renderSalesLog() {
     }
     logDiv.innerHTML = salesLog.map(log => `
         <div class="log-item">
-            <span>${new Date(log.time).toLocaleTimeString('ru-RU')}</span>
+            <span>${new Date(log.time).toLocaleTimeString('ru-RU')} — №${log.orderNumber}</span>
             <span>${log.method} — ${log.amount} ₸</span>
         </div>
     `).join('');
 }
 
-function printReceipt(total) {
+function printReceipt(total, orderNumber) {
     const now = new Date();
     const receiptHTML = `
-        <div style="font-family: monospace; width: 300px; margin: 0 auto; padding: 15px; border: 1px dashed #000; font-size: 14px;">
-            <h2 style="text-align:center; margin:8px 0;">ДОНЕРНАЯ</h2>
-            <p style="text-align:center; margin:5px;">Чек №${Date.now()}</p>
-            <p style="text-align:center;">${now.toLocaleString('ru-RU')}</p>
-            <hr>
+        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 10px 5px; font-size: 13px; line-height: 1.3;">
+            <h2 style="text-align:center; margin:5px 0; font-size:16px;">Grill Chicks</h2>
+            <p style="text-align:center; margin:3px 0; font-size:12px;">с любовью со второго</p>
+            <p style="text-align:center; margin:5px 0;">Заказ №${orderNumber}</p>
+            <p style="text-align:center; margin:5px 0;">${now.toLocaleString('ru-RU')}</p>
+            <hr style="border: none; border-top: 1px dashed #000; margin:8px 0;">
             ${cart.map(item => `
-                <div style="display:flex; justify-content:space-between; margin:4px 0;">
+                <div style="display:flex; justify-content:space-between; margin:3px 0;">
                     <span>${item.name} x${item.quantity}</span>
                     <span>${(item.price * item.quantity)} ₸</span>
                 </div>
             `).join('')}
-            <hr>
+            <hr style="border: none; border-top: 1px dashed #000; margin:8px 0;">
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:15px;">
                 <span>ИТОГО:</span><span>${total} ₸</span>
             </div>
-            <p style="text-align:center; margin:10px 0;">Оплата: ${currentPaymentMethod}</p>
-            <p style="text-align:center; font-size:12px;">Спасибо за покупку!</p>
+            <p style="text-align:center; margin:8px 0;">Оплата: ${currentPaymentMethod}</p>
+            <p style="text-align:center; font-size:11px; margin:10px 0;">Спасибо! Приходите ещё ❤️</p>
         </div>
     `;
 
     const printWin = window.open('', '_blank');
-    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},500);">${receiptHTML}</body></html>`);
+    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},800);">${receiptHTML}</body></html>`);
     printWin.document.close();
 }
 
@@ -270,24 +273,29 @@ async function checkout() {
     if (cart.length === 0) return alert('Корзина пуста!');
 
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const orderNumber = 'G' + Date.now().toString().slice(-6);
 
     try {
-        const { error } = await db.from('orders').insert([{ total_amount: totalAmount, payment_method: currentPaymentMethod }]);
+        const { error } = await db.from('orders').insert([{
+            total_amount: totalAmount,
+            payment_method: currentPaymentMethod,
+            order_number: orderNumber
+        }]);
         if (error) throw error;
 
         processShiftSale(totalAmount, currentPaymentMethod, cart);
 
-        // Добавляем в журнал
         salesLog.unshift({
             time: new Date().toISOString(),
+            orderNumber: orderNumber,
             amount: totalAmount,
             method: currentPaymentMethod
         });
         localStorage.setItem('salesLog', JSON.stringify(salesLog));
 
-        printReceipt(totalAmount);
+        printReceipt(totalAmount, orderNumber);
         
-        alert(`Чек пробит!\nСумма: ${totalAmount} ₸\nОплата: ${currentPaymentMethod}`);
+        alert(`Заказ №${orderNumber} пробит!\nСумма: ${totalAmount} ₸`);
         
         cart = [];
         renderCart();
