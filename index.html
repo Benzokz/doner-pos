@@ -1,440 +1,319 @@
-cat << 'EOF' > index.html
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Касса Донерной</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
-        .menu-container { flex: 2; }
-        .cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; display: flex; flex-direction: column; gap: 15px; }
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-        .product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
-        .product-card:hover { border-color: #2ec4b6; }
-        .product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
-        .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
-        .total { font-size: 1.2em; font-weight: bold; margin: 10px 0; }
-        .payment-methods { display: flex; gap: 10px; }
-        .pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
-        .pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
-        .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
-        .pay-btn:hover { background: #20a396; }
-        .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
-        .btn-close { background: #dc3545; }
-        .btn-close:hover { background: #c82333; }
-        .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
-        .stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
-        .stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .history-list { max-height: 180px; overflow-y: auto; border: 1px solid #eee; padding: 8px; border-radius: 4px; background: #fff; }
-        .history-item { font-size: 0.9em; padding: 4px 0; border-bottom: 1px dashed #ddd; color: #333; display: flex; justify-content: space-between; }
-        #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
-        #shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
-        #shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
-        .fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
-
-        /* Стили новой кнопки дублирования */
-        .repeat-btn { width: 100%; padding: 10px; background: #ff9f1c; color: white; border: none; border-radius: 4px; font-size: 0.95em; cursor: pointer; font-weight: bold; margin-top: 8px; display: none; }
-        .repeat-btn:hover { background: #f58f00; }
-
-        /* Контейнер для скрытой печати */
-        #secret-print-area { display: none; }
-
-        @media print {
-            body * { visibility: hidden; }
-            #secret-print-area, #secret-print-area * { visibility: visible; }
-            #secret-print-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; }
-            .receipt-block {
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 1.3em !important;
-                font-weight: 900 !important;
-                color: #000 !important;
-                line-height: 1.2;
-                page-break-after: always; /* Разрез ленты принтером после каждого чека */
-                padding-bottom: 20px;
-            }
-            .receipt-header { font-size: 1.5em !important; font-weight: 900 !important; text-align: center; text-transform: uppercase; margin-bottom: 5px; }
-            .receipt-line { display: flex; justify-content: space-between; margin: 4px 0; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Касса Донерной</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; display: flex; gap: 20px; position: relative; }
+.menu-container { flex: 2; }
+.cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; display: flex; flex-direction: column; gap: 15px; }
+.products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+.product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+.product-card:hover { border-color: #2ec4b6; }
+.product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
+.cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+.total { font-size: 1.2em; font-weight: bold; margin: 10px 0; }
+.payment-methods { display: flex; gap: 10px; }
+.pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
+.pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
+.pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
+.pay-btn:hover { background: #20a396; }
+.shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
+.btn-close { background: #dc3545; }
+.btn-close:hover { background: #c82333; }
+.history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
+.stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
+.stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
+.history-list { max-height: 180px; overflow-y: auto; border: 1px solid #eee; padding: 8px; border-radius: 4px; background: #fff; }
+.history-item { font-size: 0.9em; padding: 4px 0; border-bottom: 1px dashed #ddd; color: #333; display: flex; justify-content: space-between; }
+#shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+#shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
+#shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+.fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
+</style>
 </head>
 <body>
 
-    <!-- Невидимый в интерфейсе блок для вывода на принтер -->
-    <div id="secret-print-area"></div>
+<div id="shift-overlay">
+<h2>Смена закрыта</h2>
+<button class="start-shift-btn" onclick="openShift()">ОТКРЫТЬ СМЕНУ</button>
+</div>
 
-    <div id="shift-overlay">
-        <h2>Смена закрыта</h2>
-        <button class="start-shift-btn" onclick="openShift()">ОТКРЫТЬ СМЕНУ</button>
-    </div>
+<button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Экран</button>
 
-    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Экран</button>
+<div class="menu-container">
+<h1>Меню донерной</h1>
+<div id="menu" class="products-grid">Загрузка меню...</div>
+</div>
 
-    <div class="menu-container">
-        <h1>Меню донерной</h1>
-        <div id="menu" class="products-grid">Загрузка меню...</div>
-    </div>
+<div class="cart-container">
+<button id="shift-toggle-btn" class="shift-btn btn-close" onclick="closeShift()">ЗАКРЫТЬ СМЕНУ</button>
 
-    <div class="cart-container">
-        <button id="shift-toggle-btn" class="shift-btn btn-close" onclick="closeShift()">ЗАКРЫТЬ СМЕНУ</button>
+<h2>Текущий заказ</h2>
+<div id="cart-items"></div>
+<div class="total">Итого: <span id="total-price">0</span> ₸</div>
+<h3>Способ оплаты:</h3>
+<div class="payment-methods">
+<button id="method-cash" class="pay-method-btn active" onclick="setPaymentMethod('Наличные')">Наличные</button>
+<button id="method-kaspi" class="pay-method-btn" onclick="setPaymentMethod('Каспи Банк')">Каспи Банк</button>
+</div>
 
-        <h2>Текущий заказ</h2>
-        <div id="cart-items"></div>
-        <div class="total">Итого: <span id="total-price">0</span> ₸</div>
-        
-        <h3>Способ оплаты:</h3>
-        <div class="payment-methods">
-            <button id="method-cash" class="pay-method-btn active" onclick="setPaymentMethod('Наличные')">Наличные</button>
-            <button id="method-kaspi" class="pay-method-btn" onclick="setPaymentMethod('Каспи Банк')">Каспи Банк</button>
-        </div>
+<button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
 
-        <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
+<div class="history-container">
+<h3>Статистика за смену</h3>
+<div class="stats-block">
+<div class="stats-line"><span>💵 Наличными:</span> <strong id="stats-cash">0 ₸</strong></div>
+<div class="stats-line"><span>💳 Каспи Банк:</span> <strong id="stats-kaspi">0 ₸</strong></div>
+<div class="stats-line" style="border-top:1px solid #ccc; padding-top:5px; margin-top:5px; font-weight:bold;">
+<span>💰 Общая выручка:</span> <strong id="stats-total" style="color:#2ec4b6;">0 ₸</strong>
+</div>
+</div>
 
-        <div class="history-container">
-            <h3>Статистика за смену</h3>
-            <div class="stats-block">
-                <div class="stats-line"><span>💵 Наличными:</span> <strong id="stats-cash">0 ₸</strong></div>
-                <div class="stats-line"><span>💳 Каспи Банк:</span> <strong id="stats-kaspi">0 ₸</strong></div>
-                <div class="stats-line" style="border-top:1px solid #ccc; padding-top:5px; margin-top:5px; font-weight:bold;">
-                    <span>💰 Общая выручка:</span> <strong id="stats-total" style="color:#2ec4b6;">0 ₸</strong>
-                </div>
-                <!-- Оранжевая кнопка дубликата -->
-                <button id="btn-repeat-last" class="repeat-btn" onclick="repeatLastReceipt()">🖨️ ПОВТОРИТЬ ПОСЛЕДНИЙ ЧЕК</button>
-            </div>
-
-            <h4>Продано товаров сегодня:</h4>
-            <div id="history-list" class="history-list">
-                <div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>
-            </div>
-        </div>
-    </div>
+<h4>Продано товаров сегодня:</h4>
+<div id="history-list" class="history-list">
+<div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>
+</div>
+</div>
+</div>
 
 <script>
-    const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
-    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    
-    let cart = [];
-    let products = [];
-    let currentPaymentMethod = 'Наличные';
-    
-    let isShiftOpen = false;
-    let shiftData = {
-        openedAt: null,
-        cashSales: 0,
-        kaspiSales: 0,
-        totalSales: 0,
-        itemsSummary: {}
-    };
+const SUPABASE_URL = "https://blfbtnhwkswgidnoouvn.supabase.co";
+const SUPABASE_KEY = "sb_publishable_QqX3Kx2XXFE_nQbhVoIJbQ_RNiRRixw";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let cart = [];
+let products = [];
+let currentPaymentMethod = 'Наличные';
+let isShiftOpen = false;
+let shiftData = {
+openedAt: null,
+cashSales: 0,
+kaspiSales: 0,
+totalSales: 0,
+itemsSummary: {}
+};
 
-    // Глобальный объект для хранения структуры последней успешной продажи
-    let lastPrintedOrder = null;
+function initTerminal() {
+const savedShiftStatus = localStorage.getItem('isShiftOpen');
+const savedShiftData = localStorage.getItem('shiftData');
+if (savedShiftData) {
+shiftData = JSON.parse(savedShiftData);
+}
 
-    function initTerminal() {
-        const savedShiftStatus = localStorage.getItem('isShiftOpen');
-        const savedShiftData = localStorage.getItem('shiftData');
-        const savedLastOrder = localStorage.getItem('lastPrintedOrder');
-        
-        if (savedShiftData) {
-            shiftData = JSON.parse(savedShiftData);
-        }
-        if (savedLastOrder) {
-            lastPrintedOrder = JSON.parse(savedLastOrder);
-            document.getElementById('btn-repeat-last').style.display = 'block';
-        }
+if (savedShiftStatus === 'true') {
+isShiftOpen = true;
+document.getElementById('shift-overlay').style.display = 'none';
+} else {
+isShiftOpen = false;
+document.getElementById('shift-overlay').style.display = 'flex';
+}
+updateStatsUI();
+loadMenu();
+}
 
-        if (savedShiftStatus === 'true') {
-            isShiftOpen = true;
-            document.getElementById('shift-overlay').style.display = 'none';
-        } else {
-            isShiftOpen = false;
-            document.getElementById('shift-overlay').style.display = 'flex';
-        }
-        
-        updateStatsUI();
-        loadMenu();
-    }
+function openShift() {
+isShiftOpen = true;
+shiftData = {
+openedAt: new Date().toISOString(),
+cashSales: 0,
+kaspiSales: 0,
+totalSales: 0,
+itemsSummary: {}
+};
+localStorage.setItem('isShiftOpen', 'true');
+localStorage.setItem('shiftData', JSON.stringify(shiftData));
+document.getElementById('shift-overlay').style.display = 'none';
+updateStatsUI();
+alert('Смена успешно открыта!');
+}
 
-    function openShift() {
-        isShiftOpen = true;
-        shiftData = {
-            openedAt: new Date().toISOString(),
-            cashSales: 0,
-            kaspiSales: 0,
-            totalSales: 0,
-            itemsSummary: {}
-        };
-        lastPrintedOrder = null;
-        localStorage.setItem('isShiftOpen', 'true');
-        localStorage.setItem('shiftData', JSON.stringify(shiftData));
-        localStorage.removeItem('lastPrintedOrder');
-        
-        document.getElementById('shift-overlay').style.display = 'none';
-        document.getElementById('btn-repeat-last').style.display = 'none';
-        updateStatsUI();
-        alert('Смена успешно открыта!');
-    }
+async function closeShift() {
+if (!isShiftOpen) return;
+if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет? Все данные уйдут в архив.')) return;
 
-    async function closeShift() {
-        if (!isShiftOpen) return;
-        if (!confirm('Вы уверены, что хотите закрыть смену и снять Z-отчет? Все данные уйдут в архив.')) return;
+let itemsReport = '';
+for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+itemsReport += name + ": " + qty + " шт\n";
+}
+if (itemsReport === '') itemsReport = 'Продаж не было\n';
 
-        let itemsReport = '';
-        for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
-            itemsReport += name + ": " + qty + " шт\n";
-        }
-        if (itemsReport === '') itemsReport = 'Продаж не было\n';
+alert(
+"====== Z-ОТЧЕТ ======\n" +
+"ПРОДАННЫЕ ТОВАРЫ:\n" + itemsReport +
+"-------------------------\n" +
+"Наличные: " + shiftData.cashSales + " ₸\n" +
+"Каспи Банк: " + shiftData.kaspiSales + " ₸\n" +
+"-------------------------\n" +
+"ОБЩАЯ ВЫРУЧКА: " + shiftData.totalSales + " ₸\n" +
+"===================="
+);
 
-        alert(
-            "====== Z-ОТЧЕТ ======\n" +
-            "ПРОДАННЫЕ ТОВАРЫ:\n" + itemsReport +
-            "-------------------------\n" +
-            "Наличные: " + shiftData.cashSales + " ₸\n" +
-            "Каспи Банк: " + shiftData.kaspiSales + " ₸\n" +
-            "-------------------------\n" +
-            "ОБЩАЯ ВЫРУЧКА: " + shiftData.totalSales + " ₸\n" +
-            "===================="
-        );
+try {
+const { error } = await db.from('shifts').insert([
+{
+opened_at: shiftData.openedAt,
+closed_at: new Date().toISOString(),
+total_sales: shiftData.totalSales,
+cash_sales: shiftData.cashSales,
+kaspi_sales: shiftData.kaspiSales,
+items_summary: itemsReport
+}
+]);
 
-        try {
-            const { error } = await db.from('shifts').insert([
-                {
-                    opened_at: shiftData.openedAt,
-                    closed_at: new Date().toISOString(),
-                    total_sales: shiftData.totalSales,
-                    cash_sales: shiftData.cashSales,
-                    kaspi_sales: shiftData.kaspiSales,
-                    items_summary: itemsReport
-                }
-            ]);
+if (error) {
+alert('Ошибка сохранения смены: ' + error.message);
+return;
+}
+} catch (err) {
+alert('Сбой сети: ' + err.message);
+return;
+}
 
-            if (error) {
-                alert('Ошибка сохранения смены: ' + error.message);
-                return;
-            }
-        } catch (err) {
-            alert('Сбой сети: ' + err.message);
-            return;
-        }
+isShiftOpen = false;
+shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
+localStorage.removeItem('isShiftOpen');
+localStorage.removeItem('shiftData');
+cart = [];
+renderCart();
+updateStatsUI();
+document.getElementById('shift-overlay').style.display = 'flex';
+alert('Смена успешно закрыта и сохранена в журнал!');
+}
 
-        isShiftOpen = false;
-        shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
-        lastPrintedOrder = null;
-        localStorage.removeItem('isShiftOpen');
-        localStorage.removeItem('shiftData');
-        localStorage.removeItem('lastPrintedOrder');
-        
-        cart = [];
-        renderCart();
-        updateStatsUI();
-        
-        document.getElementById('shift-overlay').style.display = 'flex';
-        document.getElementById('btn-repeat-last').style.display = 'none';
-        alert('Смена успешно закрыта и сохранена в журнал!');
-    }
+function toggleFullscreen() {
+if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
+} else {
+if (document.exitFullscreen) document.exitFullscreen();
+else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+}
+}
 
-    function toggleFullscreen() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
-            else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
-        } else {
-            if (document.exitFullscreen) document.exitFullscreen();
-            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        }
-    }
+function setPaymentMethod(method) {
+currentPaymentMethod = method;
+document.getElementById('method-cash').classList.toggle('active', method === 'Наличные');
+document.getElementById('method-kaspi').classList.toggle('active', method === 'Каспи Банк');
+}
 
-    function setPaymentMethod(method) {
-        currentPaymentMethod = method;
-        document.getElementById('method-cash').classList.toggle('active', method === 'Наличные');
-        document.getElementById('method-kaspi').classList.toggle('active', method === 'Каспи Банк');
-    }
+async function loadMenu() {
+try {
+let { data, error } = await db.from('products').select('*');
+if (error) {
+document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка базы: ' + error.message + '</h2>';
+return;
+}
+products = data;
+renderMenu();
+} catch (err) {
+document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка скрипта: ' + err.message + '</h2>';
+}
+}
 
-    async function loadMenu() {
-        try {
-            let { data, error } = await db.from('products').select('*');
-            if (error) {
-                document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка базы: ' + error.message + '</h2>';
-                return;
-            }
-            products = data;
-            renderMenu();
-        } catch (err) {
-            document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка скрипта: ' + err.message + '</h2>';
-        }
-    }
+function renderMenu() {
+const menuDiv = document.getElementById('menu');
+menuDiv.innerHTML = '';
+products.forEach(product => {
+menuDiv.innerHTML += '<div class="product-card" onclick="addToCart(' + product.id + ')"><h3>' + product.name + '</h3><div class="product-price">' + product.price + ' ₸</div></div>';
+});
+}
 
-    function renderMenu() {
-        const menuDiv = document.getElementById('menu');
-        menuDiv.innerHTML = '';
-        products.forEach(product => {
-            menuDiv.innerHTML += '<div class="product-card" onclick="addToCart(' + product.id + ')"><h3>' + product.name + '</h3><div class="product-price">' + product.price + ' ₸</div></div>';
-        });
-    }
+function addToCart(productId) {
+if (!isShiftOpen) {
+alert('Смена закрыта!');
+return;
+}
+const product = products.find(p => p.id === productId);
+const cartItem = cart.find(item => item.id === productId);
+if (cartItem) cartItem.quantity += 1;
+else cart.push({ ...product, quantity: 1 });
+renderCart();
+}
 
-    function addToCart(productId) {
-        if (!isShiftOpen) {
-            alert('Смена закрыта!');
-            return;
-        }
-        const product = products.find(p => p.id === productId);
-        const cartItem = cart.find(item => item.id === productId);
-        if (cartItem) cartItem.quantity += 1;
-        else cart.push({ ...product, quantity: 1 });
-        renderCart();
-    }
+function renderCart() {
+const cartDiv = document.getElementById('cart-items');
+const totalSpan = document.getElementById('total-price');
+cartDiv.innerHTML = '';
+let total = 0;
+cart.forEach(item => {
+total += item.price * item.quantity;
+cartDiv.innerHTML += '<div class="cart-item"><span>' + item.name + ' x' + item.quantity + '</span><span>' + (item.price * item.quantity) + ' ₸</span></div>';
+});
+totalSpan.innerText = total;
+}
 
-    function renderCart() {
-        const cartDiv = document.getElementById('cart-items');
-        const totalSpan = document.getElementById('total-price');
-        cartDiv.innerHTML = '';
-        let total = 0;
-        cart.forEach(item => {
-            total += item.price * item.quantity;
-            cartDiv.innerHTML += '<div class="cart-item"><span>' + item.name + ' x' + item.quantity + '</span><span>' + (item.price * item.quantity) + ' ₸</span></div>';
-        });
-        totalSpan.innerText = total;
-    }
+function processShiftSale(amount, method, soldItems) {
+if (method === 'Наличные') {
+shiftData.cashSales += amount;
+} else {
+shiftData.kaspiSales += amount;
+}
+shiftData.totalSales += amount;
 
-    function processShiftSale(amount, method, soldItems) {
-        if (method === 'Наличные') {
-            shiftData.cashSales += amount;
-        } else {
-            shiftData.kaspiSales += amount;
-        }
-        shiftData.totalSales += amount;
+soldItems.forEach(item => {
+if (shiftData.itemsSummary[item.name]) {
+shiftData.itemsSummary[item.name] += item.quantity;
+} else {
+shiftData.itemsSummary[item.name] = item.quantity;
+}
+});
 
-        soldItems.forEach(item => {
-            if (shiftData.itemsSummary[item.name]) {
-                shiftData.itemsSummary[item.name] += item.quantity;
-            } else {
-                shiftData.itemsSummary[item.name] = item.quantity;
-            }
-        });
+localStorage.setItem('shiftData', JSON.stringify(shiftData));
+updateStatsUI();
+}
 
-        localStorage.setItem('shiftData', JSON.stringify(shiftData));
-        updateStatsUI();
-    }
+function updateStatsUI() {
+document.getElementById('stats-cash').innerText = shiftData.cashSales + " ₸";
+document.getElementById('stats-kaspi').innerText = shiftData.kaspiSales + " ₸";
+document.getElementById('stats-total').innerText = shiftData.totalSales + " ₸";
 
-    function updateStatsUI() {
-        document.getElementById('stats-cash').innerText = shiftData.cashSales + " ₸";
-        document.getElementById('stats-kaspi').innerText = shiftData.kaspiSales + " ₸";
-        document.getElementById('stats-total').innerText = shiftData.totalSales + " ₸";
+const historyListDiv = document.getElementById('history-list');
+const keys = Object.keys(shiftData.itemsSummary);
 
-        const historyListDiv = document.getElementById('history-list');
-        const keys = Object.keys(shiftData.itemsSummary);
+if (keys.length === 0) {
+historyListDiv.innerHTML = '<div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>';
+return;
+}
 
-        if (keys.length === 0) {
-            historyListDiv.innerHTML = '<div style="color:#aaa; font-style:italic; font-size:0.9em;">Товары еще не продавались</div>';
-            return;
-        }
+historyListDiv.innerHTML = '';
+for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+historyListDiv.innerHTML += '<div class="history-item"><span>📦 ' + name + '</span><strong>' + qty + ' шт</strong></div>';
+}
+}
 
-        historyListDiv.innerHTML = '';
-        for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
-            historyListDiv.innerHTML += '<div class="history-item"><span>📦 ' + name + '</span><strong>' + qty + ' шт</strong></div>';
-        }
-    }
+async function checkout() {
+if (!isShiftOpen) {
+alert('Смена закрыта!');
+return;
+}
+if (cart.length === 0) {
+alert('Корзина пуста!');
+return;
+}
 
-    // Вспомогательная генерация структуры сдвоенного чека для принтера
-    function buildDoubleReceiptHtml(totalAmount, method, items, isCopy = false) {
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const dateStr = new Date().toLocaleDateString();
-        let html = '';
+const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-        // ЧЕК №1: КЛИЕНТСКИЙ ЧЕК ГОСТЯ
-        html += '<div class="receipt-block">';
-        html += '<div class="receipt-header">ВКУСНЫЙ ДОНЕР</div>';
-        html += '<center style="font-size:1.1em; font-weight:bold;">' + (isCopy ? '*** КОПИЯ ЧЕКА ***' : 'Товарный чек') + '</center><br>';
-        html += '<div>Дата: ' + dateStr + ' ' + timeStr + '</div>';
-        html += '<div>Тип оплаты: ' + method + '</div>';
-        html += '====================================<br>';
-        items.forEach(item => {
-            html += '<div class="receipt-line"><span>' + item.name + ' x' + item.quantity + '</span><span>' + (item.price * item.quantity) + ' ₸</span></div>';
-        });
-        html += '====================================<br>';
-        html += '<div class="receipt-line" style="font-size:1.2em;"><strong>ИТОГО:</strong> <strong>' + totalAmount + ' ₸</strong></div>';
-        html += '<br><center>Спасибо за покупку!</center>';
-        html += '</div>';
+const { data, error } = await db.from('orders').insert([
+{
+total_amount: totalAmount,
+payment_method: currentPaymentMethod
+}
+]);
 
-        // ЧЕК №2: СЛУЖЕБНЫЙ ЧЕК ДЛЯ КУХНИ / СБОРКИ
-        html += '<div class="receipt-block">';
-        html += '<div class="receipt-header">ЗАКАЗ НА КУХНЮ</div>';
-        html += '<center style="font-size:1.1em; font-weight:bold;">' + (isCopy ? '*** КОПИЯ ЗАКАЗА ***' : 'В работу') + '</center><br>';
-        html += '<div>Время: ' + timeStr + '</div>';
-        html += '====================================<br>';
-        items.forEach(item => {
-            html += '<div style="font-size:1.4em; margin: 8px 0; line-height:1.2;"><strong>• ' + item.name + ' — [' + item.quantity + ' шт]</strong></div>';
-        });
-        html += '====================================';
-        html += '</div>';
+if (error) {
+alert('Ошибка при создании заказа: ' + error.message);
+} else {
+processShiftSale(totalAmount, currentPaymentMethod, cart);
+alert('Чек успешно пробит!\nСпособ оплаты: ' + currentPaymentMethod + '\nСумма: ' + totalAmount + ' ₸');
+cart = [];
+renderCart();
+}
+}
 
-        return html;
-    }
-
-    // Функция скрытой системной печати
-    function executeSilentPrint(totalAmount, method, items, isCopy = false) {
-        const printArea = document.getElementById('secret-print-area');
-        printArea.innerHTML = buildDoubleReceiptHtml(totalAmount, method, items, isCopy);
-        
-        setTimeout(() => {
-            window.print();
-            printArea.innerHTML = '';
-        }, 50);
-    }
-
-    // Логика кнопки дублирования
-    function repeatLastReceipt() {
-        if (!lastPrintedOrder) {
-            alert('С момента открытия смены продаж еще не было.');
-            return;
-        }
-        executeSilentPrint(lastPrintedOrder.total, lastPrintedOrder.method, lastPrintedOrder.items, true);
-    }
-
-    async function checkout() {
-        if (!isShiftOpen) {
-            alert('Смена закрыта!');
-            return;
-        }
-        if (cart.length === 0) {
-            alert('Корзина пуста!');
-            return;
-        }
-
-        const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-        const { data, error } = await db.from('orders').insert([
-            { 
-                total_amount: totalAmount, 
-                payment_method: currentPaymentMethod 
-            }
-        ]);
-
-        if (error) {
-            alert('Ошибка при создании заказа: ' + error.message);
-        } else {
-            processShiftSale(totalAmount, currentPaymentMethod, cart);
-            
-            // Запоминаем данные о продаже локально для кнопки дубликата чека
-            lastPrintedOrder = {
-                total: totalAmount,
-                method: currentPaymentMethod,
-                items: [...cart]
-            };
-            localStorage.setItem('lastPrintedOrder', JSON.stringify(lastPrintedOrder));
-            document.getElementById('btn-repeat-last').style.display = 'block';
-
-            // Автоматическая печать двух чеков
-            executeSilentPrint(totalAmount, currentPaymentMethod, cart, false);
-
-            cart = [];
-            renderCart();
-        }
-    }
-
-    initTerminal();
+initTerminal();
 </script>
 
 </body>
 </html>
-EOF
