@@ -10,16 +10,25 @@ body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; 
 .menu-container { flex: 2; }
 .cart-container { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); height: fit-content; display: flex; flex-direction: column; gap: 15px; }
 .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
-.product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; border: 2px solid transparent; }
+.product-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+.product-card:hover { border-color: #2ec4b6; }
 .product-price { font-weight: bold; color: #2ec4b6; margin-top: 10px; }
 .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
 .total { font-size: 1.2em; font-weight: bold; margin: 10px 0; }
+.payment-methods { display: flex; gap: 10px; }
+.pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
+.pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
 .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
 .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
 .btn-close { background: #dc3545; }
+.history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
+.stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
+.stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
 .sales-log { max-height: 220px; overflow-y: auto; border: 1px solid #ddd; padding: 8px; border-radius: 4px; background: #fff; font-size: 0.9em; }
 .log-item { padding: 6px 0; border-bottom: 1px dashed #ccc; display: flex; justify-content: space-between; }
 #shift-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(244, 244, 249, 0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; gap: 20px; }
+#shift-overlay h2 { font-size: 2.5em; color: #333; font-weight: bold; }
+#shift-overlay .start-shift-btn { padding: 20px 50px; font-size: 1.6em; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
 .fullscreen-btn { position: absolute; top: 10px; right: 20px; background: #fff; border: 2px solid #ccc; border-radius: 4px; padding: 8px 12px; font-size: 1.2em; cursor: pointer; z-index: 100; font-weight: bold; }
 </style>
 </head>
@@ -52,9 +61,17 @@ body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; 
 
 <div class="history-container">
 <h3>Статистика за смену</h3>
-<div class="stats-block"> ... </div>
+<div class="stats-block">
+<div class="stats-line"><span>💵 Наличными:</span> <strong id="stats-cash">0 ₸</strong></div>
+<div class="stats-line"><span>💳 Каспи Банк:</span> <strong id="stats-kaspi">0 ₸</strong></div>
+<div class="stats-line" style="border-top:1px solid #ccc; padding-top:5px; margin-top:5px; font-weight:bold;">
+<span>💰 Общая выручка:</span> <strong id="stats-total" style="color:#2ec4b6;">0 ₸</strong>
+</div>
+</div>
 <h4>Журнал продаж</h4>
-<div id="sales-log" class="sales-log">...</div>
+<div id="sales-log" class="sales-log">
+<div style="color:#aaa; font-style:italic;">Пока продаж нет</div>
+</div>
 </div>
 </div>
 
@@ -69,64 +86,202 @@ let currentPaymentMethod = 'Наличные';
 let isShiftOpen = false;
 let shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
 let salesLog = [];
-let lastReceipt = null; // для повторной печати
+let lastReceipt = null;
+
+function initTerminal() {
+    const savedShiftStatus = localStorage.getItem('isShiftOpen');
+    const savedShiftData = localStorage.getItem('shiftData');
+    const savedLog = localStorage.getItem('salesLog');
+    if (savedShiftData) shiftData = JSON.parse(savedShiftData);
+    if (savedLog) salesLog = JSON.parse(savedLog);
+    if (savedShiftStatus === 'true') {
+        isShiftOpen = true;
+        document.getElementById('shift-overlay').style.display = 'none';
+    } else {
+        isShiftOpen = false;
+        document.getElementById('shift-overlay').style.display = 'flex';
+    }
+    updateStatsUI();
+    loadMenu();
+}
+
+function openShift() {
+    isShiftOpen = true;
+    shiftData = { openedAt: new Date().toISOString(), cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
+    salesLog = [];
+    localStorage.setItem('isShiftOpen', 'true');
+    localStorage.setItem('shiftData', JSON.stringify(shiftData));
+    localStorage.setItem('salesLog', JSON.stringify(salesLog));
+    document.getElementById('shift-overlay').style.display = 'none';
+    updateStatsUI();
+    alert('Смена успешно открыта!');
+}
+
+async function closeShift() {
+    if (!isShiftOpen) return;
+    if (!confirm('Вы уверены, что хотите закрыть смену?')) return;
+    let itemsReport = '';
+    for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+        itemsReport += name + ": " + qty + " шт\n";
+    }
+    if (itemsReport === '') itemsReport = 'Продаж не было\n';
+    alert("====== Z-ОТЧЕТ ======\n" + itemsReport + "-------------------------\nНаличные: " + shiftData.cashSales + " ₸\nКаспи Банк: " + shiftData.kaspiSales + " ₸\n-------------------------\nОБЩАЯ ВЫРУЧКА: " + shiftData.totalSales + " ₸\n====================");
+    try {
+        await db.from('shifts').insert([{ opened_at: shiftData.openedAt, closed_at: new Date().toISOString(), total_sales: shiftData.totalSales, cash_sales: shiftData.cashSales, kaspi_sales: shiftData.kaspiSales, items_summary: itemsReport }]);
+    } catch (err) {}
+    isShiftOpen = false;
+    shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
+    salesLog = [];
+    localStorage.removeItem('isShiftOpen');
+    localStorage.removeItem('shiftData');
+    localStorage.removeItem('salesLog');
+    cart = [];
+    renderCart();
+    updateStatsUI();
+    document.getElementById('shift-overlay').style.display = 'flex';
+    alert('Смена успешно закрыта!');
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+}
+
+function setPaymentMethod(method) {
+    currentPaymentMethod = method;
+    document.getElementById('method-cash').classList.toggle('active', method === 'Наличные');
+    document.getElementById('method-kaspi').classList.toggle('active', method === 'Каспи Банк');
+}
+
+async function loadMenu() {
+    try {
+        let { data, error } = await db.from('products').select('*');
+        if (error) throw error;
+        products = data;
+        renderMenu();
+    } catch (err) {
+        document.getElementById('menu').innerHTML = '<h2 style="color:red;">Ошибка загрузки меню</h2>';
+    }
+}
+
+function renderMenu() {
+    const menuDiv = document.getElementById('menu');
+    menuDiv.innerHTML = '';
+    products.forEach(product => {
+        menuDiv.innerHTML += `<div class="product-card" onclick="addToCart(${product.id})"><h3>${product.name}</h3><div class="product-price">${product.price} ₸</div></div>`;
+    });
+}
+
+function addToCart(productId) {
+    if (!isShiftOpen) return alert('Смена закрыта!');
+    const product = products.find(p => p.id === productId);
+    const existing = cart.find(item => item.id === productId);
+    if (existing) existing.quantity += 1;
+    else cart.push({ ...product, quantity: 1 });
+    renderCart();
+}
+
+function renderCart() {
+    const cartDiv = document.getElementById('cart-items');
+    const totalSpan = document.getElementById('total-price');
+    cartDiv.innerHTML = '';
+    let total = 0;
+    cart.forEach(item => {
+        total += item.price * item.quantity;
+        cartDiv.innerHTML += `<div class="cart-item"><span>${item.name} x${item.quantity}</span><span>${item.price * item.quantity} ₸</span></div>`;
+    });
+    totalSpan.innerText = total;
+}
+
+function processShiftSale(amount, method, soldItems) {
+    if (method === 'Наличные') shiftData.cashSales += amount;
+    else shiftData.kaspiSales += amount;
+    shiftData.totalSales += amount;
+    soldItems.forEach(item => {
+        shiftData.itemsSummary[item.name] = (shiftData.itemsSummary[item.name] || 0) + item.quantity;
+    });
+    localStorage.setItem('shiftData', JSON.stringify(shiftData));
+    updateStatsUI();
+}
+
+function updateStatsUI() {
+    document.getElementById('stats-cash').innerText = shiftData.cashSales + " ₸";
+    document.getElementById('stats-kaspi').innerText = shiftData.kaspiSales + " ₸";
+    document.getElementById('stats-total').innerText = shiftData.totalSales + " ₸";
+    renderSalesLog();
+}
+
+function renderSalesLog() {
+    const logDiv = document.getElementById('sales-log');
+    if (salesLog.length === 0) {
+        logDiv.innerHTML = '<div style="color:#aaa; font-style:italic;">Пока продаж нет</div>';
+        return;
+    }
+    logDiv.innerHTML = salesLog.map(log => `
+        <div class="log-item">
+            <span>${new Date(log.time).toLocaleTimeString('ru-RU')} — №${log.orderNumber}</span>
+            <span>${log.method} — ${log.amount} ₸</span>
+        </div>
+    `).join('');
+}
 
 function printReceipt(total, orderNumber) {
-    lastReceipt = {total, orderNumber}; // сохраняем для повтора
+    lastReceipt = {total, orderNumber};
     const now = new Date();
     const receiptHTML = `
-        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 12px 8px; font-size: 15px; line-height: 1.4; font-weight: bold;">
+        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 12px 8px; font-size: 16px; line-height: 1.5; font-weight: bold;">
             <h2 style="text-align:center; margin:8px 0; font-size:18px;">Grill Chicks</h2>
             <p style="text-align:center; margin:4px 0; font-size:13px;">с любовью со второго</p>
             <p style="text-align:center; margin:6px 0;">Заказ №${orderNumber}</p>
             <p style="text-align:center; margin:6px 0;">${now.toLocaleString('ru-RU')}</p>
-            <hr style="border: none; border-top: 2px dashed #000; margin:10px 0;">
+            <hr style="border: none; border-top: 1px dashed #000; margin:10px 0;">
             ${cart.map(item => `
                 <div style="display:flex; justify-content:space-between; margin:5px 0;">
                     <span>${item.name} x${item.quantity}</span>
                     <span>${(item.price * item.quantity)} ₸</span>
                 </div>
             `).join('')}
-            <hr style="border: none; border-top: 2px dashed #000; margin:10px 0;">
-            <div style="display:flex; justify-content:space-between; font-size:17px;">
+            <hr style="border: none; border-top: 1px dashed #000; margin:10px 0;">
+            <div style="display:flex; justify-content:space-between; font-size:18px;">
                 <span>ИТОГО:</span><span>${total} ₸</span>
             </div>
             <p style="text-align:center; margin:10px 0;">Оплата: ${currentPaymentMethod}</p>
-            <p style="text-align:center; font-size:13px;">Спасибо! Приходите ещё ❤️</p>
+            <p style="text-align:center; font-size:14px;">Спасибо! Приходите ещё ❤️</p>
         </div>
     `;
 
     const printWin = window.open('', '_blank');
-    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},1000);">${receiptHTML}</body></html>`);
+    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},800);">${receiptHTML}</body></html>`);
     printWin.document.close();
 }
 
 function reprintLastReceipt() {
-    if (!lastReceipt) return alert('Нет последнего чека для печати');
+    if (!lastReceipt) return alert('Нет последнего чека для печати!');
     printReceipt(lastReceipt.total, lastReceipt.orderNumber);
 }
 
 async function checkout() {
-    if (!isShiftOpen || cart.length === 0) return alert('Ошибка');
-
+    if (!isShiftOpen) return alert('Смена закрыта!');
+    if (cart.length === 0) return alert('Корзина пуста!');
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const orderNumber = parseInt(Date.now().toString().slice(-8));
-
     try {
-        await db.from('orders').insert([{
+        const { error } = await db.from('orders').insert([{
             total_amount: totalAmount,
             payment_method: currentPaymentMethod,
             order_number: orderNumber
         }]);
-
+        if (error) throw error;
         processShiftSale(totalAmount, currentPaymentMethod, cart);
-
-        salesLog.unshift({ time: new Date().toISOString(), orderNumber, amount: totalAmount, method: currentPaymentMethod });
+        salesLog.unshift({
+            time: new Date().toISOString(),
+            orderNumber: orderNumber,
+            amount: totalAmount,
+            method: currentPaymentMethod
+        });
         localStorage.setItem('salesLog', JSON.stringify(salesLog));
-
         printReceipt(totalAmount, orderNumber);
-        alert(`Заказ №${orderNumber} пробит!`);
-        
+        alert(`Заказ №${orderNumber} пробит!\nСумма: ${totalAmount} ₸`);
         cart = [];
         renderCart();
         renderSalesLog();
@@ -134,8 +289,6 @@ async function checkout() {
         alert('Ошибка: ' + err.message);
     }
 }
-
-// Добавь остальные функции (initTerminal, loadMenu, renderMenu, addToCart и т.д.) из предыдущей версии
 
 initTerminal();
 </script>
