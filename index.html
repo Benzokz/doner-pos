@@ -229,29 +229,29 @@ function printReceipt(total, orderNumber) {
     lastReceipt = {total, orderNumber};
     const now = new Date();
     const receiptHTML = `
-        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 12px 8px; font-size: 16px; line-height: 1.5; font-weight: bold;">
-            <h2 style="text-align:center; margin:8px 0; font-size:18px;">Grill Chicks</h2>
-            <p style="text-align:center; margin:4px 0; font-size:13px;">с любовью со второго</p>
-            <p style="text-align:center; margin:6px 0;">Заказ №${orderNumber}</p>
-            <p style="text-align:center; margin:6px 0;">${now.toLocaleString('ru-RU')}</p>
-            <hr style="border: none; border-top: 1px dashed #000; margin:10px 0;">
+        <div style="font-family: monospace; width: 300px; margin: 0 auto; padding: 15px; border: 1px dashed #000; font-size: 22px; line-height: 1.6; font-weight: bold;">
+            <h2 style="text-align:center; margin:10px 0; font-size:26px;">Grill Chicks</h2>
+            <p style="text-align:center; margin:6px 0; font-size:16px;">с любовью со второго</p>
+            <p style="text-align:center; margin:8px 0;">Заказ №${orderNumber}</p>
+            <p style="text-align:center; margin:8px 0;">${now.toLocaleString('ru-RU')}</p>
+            <hr style="border: none; border-top: 2px dashed #000; margin:12px 0;">
             ${cart.map(item => `
-                <div style="display:flex; justify-content:space-between; margin:5px 0;">
+                <div style="display:flex; justify-content:space-between; margin:6px 0;">
                     <span>${item.name} x${item.quantity}</span>
                     <span>${(item.price * item.quantity)} ₸</span>
                 </div>
             `).join('')}
-            <hr style="border: none; border-top: 1px dashed #000; margin:10px 0;">
-            <div style="display:flex; justify-content:space-between; font-size:18px;">
+            <hr style="border: none; border-top: 2px dashed #000; margin:12px 0;">
+            <div style="display:flex; justify-content:space-between; font-size:26px;">
                 <span>ИТОГО:</span><span>${total} ₸</span>
             </div>
-            <p style="text-align:center; margin:10px 0;">Оплата: ${currentPaymentMethod}</p>
-            <p style="text-align:center; font-size:14px;">Спасибо! Приходите ещё ❤️</p>
+            <p style="text-align:center; margin:12px 0;">Оплата: ${currentPaymentMethod}</p>
+            <p style="text-align:center; font-size:17px;">Спасибо! Приходите ещё ❤️</p>
         </div>
     `;
 
     const printWin = window.open('', '_blank');
-    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},800);">${receiptHTML}</body></html>`);
+    printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},1000);">${receiptHTML}</body></html>`);
     printWin.document.close();
 }
 
