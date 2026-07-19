@@ -226,8 +226,8 @@ function renderSalesLog() {
     `).join('');
 }
 
-function printReceipt(total, orderNumber) {
-    lastReceipt = {total, orderNumber, items: [...cart]};
+function printReceipt(total, orderNumber, items = null) {
+    lastReceipt = {total, orderNumber, items: items || cart};
     const now = new Date();
     const receiptHTML = `
         <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 12px 8px; font-size: 26px; line-height: 1.5; font-weight: bold;">
@@ -236,7 +236,7 @@ function printReceipt(total, orderNumber) {
             <p style="text-align:center; margin:8px 0;">Заказ №${orderNumber}</p>
             <p style="text-align:center; margin:8px 0;">${now.toLocaleString('ru-RU')}</p>
             <hr style="border: none; border-top: 1px dashed #000; margin:12px 0;">
-            ${cart.map(item => `
+            ${(lastReceipt.items || []).map(item => `
                 <div style="display:flex; justify-content:space-between; margin:8px 0;">
                     <span>${item.name} x${item.quantity}</span>
                     <span>${(item.price * item.quantity)} ₸</span>
@@ -258,9 +258,8 @@ function printReceipt(total, orderNumber) {
 
 function reprintLastReceipt() {
     if (!lastReceipt) return alert('Нет последнего чека!');
-    printReceipt(lastReceipt.total, lastReceipt.orderNumber);
+    printReceipt(lastReceipt.total, lastReceipt.orderNumber, lastReceipt.items);
 }
-
 function printZReport() {
     let itemsReport = '';
     for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
@@ -308,7 +307,7 @@ async function checkout() {
             method: currentPaymentMethod
         });
         localStorage.setItem('salesLog', JSON.stringify(salesLog));
-        printReceipt(totalAmount, orderNumber);
+        printReceipt(totalAmount, orderNumber, [...cart]); // сохраняем копию корзины
         alert(`Заказ №${orderNumber} пробит!\nСумма: ${totalAmount} ₸`);
         cart = [];
         renderCart();
