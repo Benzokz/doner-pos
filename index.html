@@ -19,10 +19,8 @@ body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; 
 .pay-method-btn { flex: 1; padding: 10px; border: 2px solid #ccc; border-radius: 4px; background: white; cursor: pointer; font-weight: bold; }
 .pay-method-btn.active { border-color: #2ec4b6; background: #e6f9f7; color: #2ec4b6; }
 .pay-btn { width: 100%; padding: 15px; background: #2ec4b6; color: white; border: none; border-radius: 4px; font-size: 1.1em; cursor: pointer; font-weight: bold; }
-.pay-btn:hover { background: #20a396; }
 .shift-btn { width: 100%; padding: 12px; border: none; border-radius: 4px; font-size: 1em; cursor: pointer; font-weight: bold; color: white; }
 .btn-close { background: #dc3545; }
-.btn-close:hover { background: #c82333; }
 .history-container { margin-top: 10px; border-top: 2px solid #eee; padding-top: 15px; }
 .stats-block { background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 0.95em; }
 .stats-line { display: flex; justify-content: space-between; margin-bottom: 5px; }
@@ -59,6 +57,7 @@ body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; 
 </div>
 
 <button class="pay-btn" onclick="checkout()">ПРОБИТЬ ЧЕК</button>
+<button class="pay-btn" style="background:#555; margin-top:8px;" onclick="reprintLastReceipt()">Повторить последний чек</button>
 
 <div class="history-container">
 <h3>Статистика за смену</h3>
@@ -73,6 +72,7 @@ body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f9; 
 <div id="sales-log" class="sales-log">
 <div style="color:#aaa; font-style:italic;">Пока продаж нет</div>
 </div>
+<button class="pay-btn" style="background:#28a745; margin-top:15px;" onclick="printZReport()">Напечатать Z-отчёт</button>
 </div>
 </div>
 
@@ -87,6 +87,7 @@ let currentPaymentMethod = 'Наличные';
 let isShiftOpen = false;
 let shiftData = { openedAt: null, cashSales: 0, kaspiSales: 0, totalSales: 0, itemsSummary: {} };
 let salesLog = [];
+let lastReceipt = null;
 
 function initTerminal() {
     const savedShiftStatus = localStorage.getItem('isShiftOpen');
@@ -226,50 +227,80 @@ function renderSalesLog() {
 }
 
 function printReceipt(total, orderNumber) {
+    lastReceipt = {total, orderNumber};
     const now = new Date();
     const receiptHTML = `
-        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 10px 5px; font-size: 13px; line-height: 1.3;">
-            <h2 style="text-align:center; margin:5px 0; font-size:16px;">Grill Chicks</h2>
-            <p style="text-align:center; margin:3px 0; font-size:12px;">с любовью со второго</p>
-            <p style="text-align:center; margin:5px 0;">Заказ №${orderNumber}</p>
-            <p style="text-align:center; margin:5px 0;">${now.toLocaleString('ru-RU')}</p>
-            <hr style="border: none; border-top: 1px dashed #000; margin:8px 0;">
+        <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 12px 8px; font-size: 26px; line-height: 1.5; font-weight: bold;">
+            <h2 style="text-align:center; margin:8px 0; font-size:32px;">Grill Chicks</h2>
+            <p style="text-align:center; margin:4px 0; font-size:18px;">с любовью со второго</p>
+            <p style="text-align:center; margin:8px 0;">Заказ №${orderNumber}</p>
+            <p style="text-align:center; margin:8px 0;">${now.toLocaleString('ru-RU')}</p>
+            <hr style="border: none; border-top: 1px dashed #000; margin:12px 0;">
             ${cart.map(item => `
-                <div style="display:flex; justify-content:space-between; margin:3px 0;">
+                <div style="display:flex; justify-content:space-between; margin:8px 0;">
                     <span>${item.name} x${item.quantity}</span>
                     <span>${(item.price * item.quantity)} ₸</span>
                 </div>
             `).join('')}
-            <hr style="border: none; border-top: 1px dashed #000; margin:8px 0;">
-            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:15px;">
+            <hr style="border: none; border-top: 1px dashed #000; margin:12px 0;">
+            <div style="display:flex; justify-content:space-between; font-size:30px;">
                 <span>ИТОГО:</span><span>${total} ₸</span>
             </div>
-            <p style="text-align:center; margin:8px 0;">Оплата: ${currentPaymentMethod}</p>
-            <p style="text-align:center; font-size:11px; margin:10px 0;">Спасибо! Приходите ещё ❤️</p>
+            <p style="text-align:center; margin:12px 0;">Оплата: ${currentPaymentMethod}</p>
+            <p style="text-align:center; font-size:18px;">Спасибо! Приходите ещё ❤️</p>
         </div>
     `;
+
     const printWin = window.open('', '_blank');
     printWin.document.write(`<html><head><title>Чек</title></head><body onload="window.print();setTimeout(()=>{window.close()},800);">${receiptHTML}</body></html>`);
+    printWin.document.close();
+}
+
+function reprintLastReceipt() {
+    if (!lastReceipt) return alert('Нет последнего чека!');
+    printReceipt(lastReceipt.total, lastReceipt.orderNumber);
+}
+
+function printZReport() {
+    let itemsReport = '';
+    for (const [name, qty] of Object.entries(shiftData.itemsSummary)) {
+        itemsReport += name + " x" + qty + "\n";
+    }
+    if (itemsReport === '') itemsReport = 'Продаж не было\n';
+
+    const zReportHTML = `
+        <div style="font-family: monospace; width: 300px; margin: 0 auto; padding: 15px; border: 1px dashed #000; font-size: 16px; line-height: 1.6;">
+            <h2 style="text-align:center;">Z-ОТЧЁТ</h2>
+            <p style="text-align:center;">${new Date().toLocaleString('ru-RU')}</p>
+            <hr>
+            <p><strong>ПРОДАННЫЕ ТОВАРЫ:</strong></p>
+            <pre>${itemsReport}</pre>
+            <hr>
+            <p>Наличные: ${shiftData.cashSales} ₸</p>
+            <p>Каспи Банк: ${shiftData.kaspiSales} ₸</p>
+            <hr>
+            <p style="font-size:19px; font-weight:bold;">ОБЩАЯ ВЫРУЧКА: ${shiftData.totalSales} ₸</p>
+        </div>
+    `;
+
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<html><head><title>Z-Отчёт</title></head><body onload="window.print();setTimeout(()=>{window.close()},1000);">${zReportHTML}</body></html>`);
     printWin.document.close();
 }
 
 async function checkout() {
     if (!isShiftOpen) return alert('Смена закрыта!');
     if (cart.length === 0) return alert('Корзина пуста!');
-
     const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const orderNumber = parseInt(Date.now().toString().slice(-8)); // только цифры
-
+    const orderNumber = parseInt(Date.now().toString().slice(-8));
     try {
         const { error } = await db.from('orders').insert([{
             total_amount: totalAmount,
             payment_method: currentPaymentMethod,
-            order_number: orderNumber   // только число
+            order_number: orderNumber
         }]);
         if (error) throw error;
-
         processShiftSale(totalAmount, currentPaymentMethod, cart);
-
         salesLog.unshift({
             time: new Date().toISOString(),
             orderNumber: orderNumber,
@@ -277,15 +308,11 @@ async function checkout() {
             method: currentPaymentMethod
         });
         localStorage.setItem('salesLog', JSON.stringify(salesLog));
-
         printReceipt(totalAmount, orderNumber);
-        
         alert(`Заказ №${orderNumber} пробит!\nСумма: ${totalAmount} ₸`);
-        
         cart = [];
         renderCart();
         renderSalesLog();
-        
     } catch (err) {
         alert('Ошибка: ' + err.message);
     }
